@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+	<extension id="org.eclipse.equinox.p2.director.extended" point="org.eclipse.core.runtime.applications"> 
+		<application
+        cardinality="singleton-global"
+        thread="main"
+        visible="true"> 
+			<run class="org.eclipse.equinox.p2.director.extended.DirectorApplication"/> 
+		</application> 
+	</extension>
+	<extension id="product" point="org.eclipse.core.runtime.products">
+		<product application="org.eclipse.equinox.p2.director.extended.application" name="Extended Equinox Provisioning Director" />
+	</extension> 
+	<!--extension id="org.eclipse.equinox.p2.director.extended.product" point="org.eclipse.core.runtime.products">
+		<product application="org.eclipse.equinox.p2.director.extended" name="Extended Equinox P2 Director" />
+	</extension--> 
+</plugin>
