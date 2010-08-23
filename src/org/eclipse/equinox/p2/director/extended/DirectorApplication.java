@@ -88,7 +88,7 @@ public class DirectorApplication extends ForkedDirectorApplication {
 			for (int i = 0; i < args.length; i++) {
 				String opt = args[i];
 				if (opt.startsWith("-props")) {
-					i = i+2;
+					i = i++;
 				} else {
 					newArgs.add(opt);
 				}
@@ -162,9 +162,12 @@ public class DirectorApplication extends ForkedDirectorApplication {
 				if (i+1 < args.size()) {
 					String v = args.get(i+1);
 					if (v.startsWith("-")) {
+						//a flag
 						cmdArgs.put(opt, "");
 					} else {
+						//a parameter
 						cmdArgs.put(opt, v);
+						i++;
 					}
 				}
 			}
@@ -175,10 +178,14 @@ public class DirectorApplication extends ForkedDirectorApplication {
 			String uris = entry.getValue();
 			int num = parseNumber(propsArg);
 			if (num > 10) {
+//				System.err.println(uris + " overriding the cmd-line. " + num);
 				Properties propsLoaded = loadProperties(uris);
 				for (Object key : propsLoaded.keySet()) {
 					String keyStr = (String)key;
 					String value = propsLoaded.getProperty(keyStr);
+//					if (cmdArgs.containsKey(keyStr)) {
+//						System.err.println("Overriding " + keyStr + " with " + value);
+//					}
 					cmdArgs.put(keyStr, value);
 				}
 			}
@@ -192,8 +199,8 @@ public class DirectorApplication extends ForkedDirectorApplication {
 				Properties propsLoaded = loadProperties(uris);
 				for (Object key : propsLoaded.keySet()) {
 					String keyStr = (String)key;
-					String value = propsLoaded.getProperty(keyStr);
 					if (!cmdArgs.containsKey(keyStr)) {
+						String value = propsLoaded.getProperty(keyStr);
 						cmdArgs.put(keyStr, value);
 					}
 				}
@@ -228,10 +235,11 @@ public class DirectorApplication extends ForkedDirectorApplication {
 		try {
 			URI ur = new URI(uri.startsWith("/") ? ("file:" + uri) : uri);
 			if (!ur.isAbsolute()) {
-				ur = ur.resolve(new File(".").toURI());
+				ur = new File(".").toURI().resolve(ur);
 			}
 			inStream = ur.toURL().openStream();
 			p.load(inStream);
+//			System.err.println("Loading props " + ur.toString());
 		} catch (Throwable t) {
 			throw new ProvisionException("Invalid uri '" + uri + "'. " +
 					"Expecting either an absolute file path or an absolute uri", t);
