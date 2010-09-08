@@ -43,6 +43,7 @@
       </retrieveFileTransferProtocolFactory>
    </extension>
 
+<!-- not needed for basic p2 operations ? -->
    <!--extension
          point="org.eclipse.ecf.provider.filetransfer.browseFileTransferProtocolFactory">
       <browseFileTransferProtocolFactory
