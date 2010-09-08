@@ -10,8 +10,12 @@
  */
 package org.eclipse.equinox.p2.director.extended.internal;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.equinox.p2.metadata.IArtifactKey;
@@ -41,33 +45,32 @@ public class AddSourcesRequirementsHelper {
 	 */
 	public static Set<IRequirement> reviewAvailableIInstallableUnits(IInstallableUnit[] availableIUs) {
 		Set<IRequirement> sourceRequirements = new HashSet<IRequirement>();
+		
+		List<IInstallableUnit> runtimeBundles = new LinkedList<IInstallableUnit>();
+		Map<String,IInstallableUnit> sourceBundles = new HashMap<String, IInstallableUnit>();
 		for (IInstallableUnit iu : availableIUs) {
-			addSourceBundleRequiredCapability(sourceRequirements, iu);
+			IArtifactKey aKey = getBundleArtifactKey(iu);
+			if (aKey == null) {
+				continue;
+			}
+			if (aKey.getId().endsWith(SOURCE_SUFFIX)) {
+				sourceBundles.put(aKey.getId().substring(0, aKey.getId().length() - SOURCE_SUFFIX.length()), iu);
+			} else if (aKey.getId().endsWith(SOURCES_SUFFIX)) {
+				sourceBundles.put(aKey.getId().substring(0, aKey.getId().length() - SOURCES_SUFFIX.length()), iu);
+			} else {
+				runtimeBundles.add(iu);
+			}
+		}
+		for (IInstallableUnit runtimeBundleIU : runtimeBundles) {
+			IInstallableUnit sourceBundle = sourceBundles.get(runtimeBundleIU.getId());
+			//create a new optional requirement for an osgi.bundle with the same version range, and the same
+			//same id suffixed by .source or .sources.
+			if (sourceBundle != null) {
+				IRequirement source = createOptionalSourceRequirement(runtimeBundleIU, sourceBundle);
+				sourceRequirements.add(source);
+			}
 		}
 		return sourceRequirements;
-	}
-	
-	/**
-	 * If the iu is a runtime osgi.bundle (name does not end with .source or .sources)
-	 * then add a new optional required capability that points to the source bundle
-	 * that might be present.
-	 * 
-	 * @param iu
-	 */
-	private static void addSourceBundleRequiredCapability(Set<IRequirement> sourceRequirements, IInstallableUnit iu) {
-		IArtifactKey aKey = getBundleArtifactKey(iu);
-		if (aKey == null) {
-			return;
-		}
-		if (aKey.getId().endsWith(SOURCE_SUFFIX) || aKey.getId().endsWith(SOURCES_SUFFIX)) {
-			return;
-		}
-		//create a new optional requirement for an osgi.bundle with the same version range, and the same
-		//same id suffixed by .source or .sources.
-		IRequirement source = createOptionalSourceRequirement(iu, SOURCE_SUFFIX);
-		IRequirement sources = createOptionalSourceRequirement(iu, SOURCES_SUFFIX);
-		sourceRequirements.add(source);
-		sourceRequirements.add(sources);
 	}
 	
 	/**
@@ -85,12 +88,12 @@ public class AddSourcesRequirementsHelper {
 		return null;
 	}
 
-	private static IRequirement createOptionalSourceRequirement(IInstallableUnit iu, String iuIdSuffix) {
+	private static IRequirement createOptionalSourceRequirement(IInstallableUnit runtimeIU, IInstallableUnit sourceIU) {
 		//debug: make one of the source req mandatory.
 		boolean mandatory = false;//iu.getId().equals("org.eclipse.jetty.server") && iuIdSuffix.equals(SOURCE_SUFFIX);
 		
-		return MetadataFactory.createRequirement(/*"osgi.bundle"*/IInstallableUnit.NAMESPACE_IU_ID, iu.getId() + iuIdSuffix,
-				new VersionRange(iu.getVersion(), true, iu.getVersion(), true), null,
+		return MetadataFactory.createRequirement(IInstallableUnit.NAMESPACE_IU_ID, sourceIU.getId(),
+				new VersionRange(runtimeIU.getVersion(), true, runtimeIU.getVersion(), true), null,
 				!mandatory, //optional
 				false,
 				true);
