@@ -15,4 +15,46 @@
 	<!--extension id="org.eclipse.equinox.p2.director.extended.product" point="org.eclipse.core.runtime.products">
 		<product application="org.eclipse.equinox.p2.director.extended" name="Extended Equinox P2 Director" />
 	</extension--> 
+	
+	<!-- Support for http basic authentication with credentials written
+	inside the url, debian style: http://USERNAME:PASSWORD@HOST:PORT/...
+	just use xhttp -->
+   <extension
+         point="org.eclipse.ecf.provider.filetransfer.retrieveFileTransferProtocolFactory">
+      <retrieveFileTransferProtocolFactory
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.extended.XHttpClientRetrieveFileTransferFactory"
+            protocol="http"
+            priority="10">
+      </retrieveFileTransferProtocolFactory>
+      <retrieveFileTransferProtocolFactory
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.extended.XHttpClientRetrieveFileTransferFactory"
+            protocol="https"
+            priority="10">
+      </retrieveFileTransferProtocolFactory>
+      <retrieveFileTransferProtocolFactory
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.extended.XHttpClientRetrieveFileTransferFactory"
+            protocol="xhttp"
+            priority="50">
+      </retrieveFileTransferProtocolFactory>
+      <retrieveFileTransferProtocolFactory
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.extended.XHttpClientRetrieveFileTransferFactory"
+            protocol="xhttps"
+            priority="50">
+      </retrieveFileTransferProtocolFactory>
+   </extension>
+
+   <!--extension
+         point="org.eclipse.ecf.provider.filetransfer.browseFileTransferProtocolFactory">
+      <browseFileTransferProtocolFactory
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.HttpClientBrowseFileTransferFactory"
+            protocol="http"
+            priority="50">
+      </browseFileTransferProtocolFactory>
+      <browseFileTransferProtocolFactory
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.HttpClientBrowseFileTransferFactory"
+            protocol="https"
+            priority="50">
+      </browseFileTransferProtocolFactory>
+   </extension-->
+	
 </plugin>

@@ -88,7 +88,9 @@ public class DirectorApplication extends ForkedDirectorApplication {
 			for (int i = 0; i < args.length; i++) {
 				String opt = args[i];
 				if (opt.startsWith("-props")) {
-					i = i++;
+					i++;
+				} else if (opt.equals("-eclipse.password")) {
+					i++;
 				} else {
 					newArgs.add(opt);
 				}
