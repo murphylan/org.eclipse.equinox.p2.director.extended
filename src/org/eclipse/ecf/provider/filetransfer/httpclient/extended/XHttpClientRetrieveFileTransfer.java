@@ -39,6 +39,7 @@ import org.eclipse.ecf.provider.filetransfer.httpclient.HttpClientRetrieveFileTr
 public class XHttpClientRetrieveFileTransfer extends
 		HttpClientRetrieveFileTransfer {
 
+	
 	private URL originalUrl;
 	
 	public XHttpClientRetrieveFileTransfer(HttpClient httpClient) {
@@ -72,30 +73,12 @@ public class XHttpClientRetrieveFileTransfer extends
 			IFileTransferListener transferListener, Map ops)
 			throws IncomingFileTransferException {
 		try {
-			URL url = rFileID.getURL();
-			String oriStr = url.toExternalForm();
-			String userInfo = url.getUserInfo();
-			if (userInfo != null && userInfo.length() > 0) {
-				//make sure we can rebuild the url from the '@' at the end of the
-				//user-info
-				int at = oriStr.indexOf(userInfo+"@");
-				if (at != -1) {
-					StringBuffer newBuf = new StringBuffer();
-					if (oriStr.startsWith("xhttp://")) {
-						newBuf.append("http://");
-					} else if (oriStr.startsWith("xhttps://")) {
-						newBuf.append("https://");
-					} else {
-						newBuf.append(url.getProtocol()+"://");
-					}
-					newBuf.append(oriStr.substring(at+userInfo.length()+1));
-					this.originalUrl = url;
-					
-					url = new URL(newBuf.toString());
-					Namespace namespace = rFileID.getNamespace();
-					rFileID = (IFileID) IDFactory.getDefault().createID(namespace, new Object[] {url});
-				}
-				
+			URL ori = rFileID.getURL();
+			URL url = XHttpClientFileSystemBrowser.getURLWithoutUserInfo(ori);
+			if (url != null) {
+				this.originalUrl = ori;
+				Namespace namespace = rFileID.getNamespace();
+				rFileID = (IFileID) IDFactory.getDefault().createID(namespace, new Object[] {url});
 			}
 		} catch (final MalformedURLException e) {
 			setDoneException(e);

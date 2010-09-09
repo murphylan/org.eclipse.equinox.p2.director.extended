@@ -17,8 +17,7 @@
 	</extension--> 
 	
 	<!-- Support for http basic authentication with credentials written
-	inside the url, debian style: http://USERNAME:PASSWORD@HOST:PORT/...
-	just use xhttp -->
+	inside the url, debian style: http://USERNAME:PASSWORD@HOST:PORT/... -->
    <extension
          point="org.eclipse.ecf.provider.filetransfer.retrieveFileTransferProtocolFactory">
       <retrieveFileTransferProtocolFactory
@@ -43,19 +42,28 @@
       </retrieveFileTransferProtocolFactory>
    </extension>
 
-<!-- not needed for basic p2 operations ? -->
-   <!--extension
+   <extension
          point="org.eclipse.ecf.provider.filetransfer.browseFileTransferProtocolFactory">
       <browseFileTransferProtocolFactory
-            class="org.eclipse.ecf.provider.filetransfer.httpclient.HttpClientBrowseFileTransferFactory"
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.extended.XHttpClientBrowseFileTransferFactory"
             protocol="http"
+            priority="10">
+      </browseFileTransferProtocolFactory>
+      <browseFileTransferProtocolFactory
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.extended.XHttpClientBrowseFileTransferFactory"
+            protocol="https"
+            priority="10">
+      </browseFileTransferProtocolFactory>
+      <browseFileTransferProtocolFactory
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.extended.XHttpClientBrowseFileTransferFactory"
+            protocol="xhttp"
             priority="50">
       </browseFileTransferProtocolFactory>
       <browseFileTransferProtocolFactory
-            class="org.eclipse.ecf.provider.filetransfer.httpclient.HttpClientBrowseFileTransferFactory"
-            protocol="https"
+            class="org.eclipse.ecf.provider.filetransfer.httpclient.extended.XHttpClientBrowseFileTransferFactory"
+            protocol="xhttps"
             priority="50">
       </browseFileTransferProtocolFactory>
-   </extension-->
+   </extension>
 	
 </plugin>
