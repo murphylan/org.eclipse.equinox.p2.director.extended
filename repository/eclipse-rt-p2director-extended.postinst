@@ -1,0 +1,73 @@
+#!/bin/sh
+#
+# see: dh_installdeb(1)
+set -e
+
+#http://www.debian.org/doc/FAQ/ch-pkg_basics.en.html
+#replaced by the actual version during the build:
+VERSION="3.6.0"
+case "$1" in
+    configure)
+	
+	INSTDIR=/opt/EclipseRTp2HeadlessDirector
+	INSTDIR_V=$INSTDIR/$VERSION
+	INSTDIR_CURRENT=$INSTDIR/current
+
+	chmod -R 755 $INSTDIR_V
+	chown root:root -R $INSTDIR_V
+	#chmod +x $INSTDIR_V/__p2director
+	#chmod +x $INSTDIR_V/p2mirror
+	#chmod +x $INSTDIR_V/p2antrunner
+	#chmod +x $INSTDIR_V/p2composite
+	#chmod +x $INSTDIR_V/start.sh
+	chmod +x $INSTDIR_V/p2director.sh
+	#chmod +x $INSTDIR_V/eclipse
+
+        #change the config area:
+        #delete whatever config area there might have been
+        #then append a new line with our own config area to support the multi-user.
+	#osgi.configuration.area=@user.home/.p2HeadlessDirector/configuration
+	CONFIG_INI=$INSTDIR_V/configuration/config.ini
+        sed -i -e "/^osgi\.configuration\.area=.*$/d" $CONFIG_INI
+	sed '$a\osgi.configuration.area=@user.home/.p2HeadlessDirector/configuration\' $CONFIG_INI
+
+	#create the link to the current directory.
+	if [ -h $INSTDIR_CURRENT ]; then
+	  rm  $INSTDIR_CURRENT
+	fi
+	ln -s $INSTDIR_V $INSTDIR_CURRENT
+
+	#create the link to the executable: /usr/bin/p2mirror
+	EXEC=/usr/bin/p2director.sh
+#	EXEC=/usr/bin/p2director
+	if [ -h $EXEC ]; then
+	  rm  $EXEC
+	fi
+	ln -s $INSTDIR_CURRENT/p2director.sh $EXEC
+	EXEC_MIRROR=/usr/bin/p2mirror
+	if [ -h $EXEC_MIRROR ]; then
+	  rm  $EXEC_MIRROR
+	fi
+	ln -s $INSTDIR_CURRENT/p2mirror $EXEC_MIRROR
+	EXEC_COMP=/usr/bin/p2composite
+	if [ -h $EXEC_COMP ]; then
+	  rm  $EXEC_COMP
+	fi
+	ln -s $INSTDIR_CURRENT/p2composite $EXEC_COMP
+	EXEC_ANT=/usr/bin/p2antrunner
+	if [ -h $EXEC_ANT ]; then
+	  rm  $EXEC_ANT
+	fi
+	ln -s $INSTDIR_CURRENT/p2antrunner $EXEC_ANT
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 0
+    ;;
+esac
+

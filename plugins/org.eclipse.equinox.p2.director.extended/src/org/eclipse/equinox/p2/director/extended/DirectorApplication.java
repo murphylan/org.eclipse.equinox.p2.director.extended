@@ -53,11 +53,24 @@ import org.eclipse.equinox.p2.director.extended.internal.ForkedDirectorApplicati
  * Unless we find a better way the sources are located using the convention that the sources
  * of a given bundle have the same symbolic-name with the suffix &quot;.source&quot;.
  * <p>
+ * <p>
+ * Currently in p2director the upgrade operation is not supported.
+ * Instead it is recommended to always make a new installation.
+ * There is an automated archiving mode for existing destination folders.
+ * The parameter on-existing-destination takes 3 values:
+ * <ul>
+ * <li>nothing (default): does not do a thing</li>
+ * <li>fail:  will fail if the destination folder exists</li>
+ * <li>archive: renames the existing destination folder with a timestamp of the installation</li>
+ * </ul>
+ * </p>
  * 
  * @author hmalphettes
  */
 public class DirectorApplication extends ForkedDirectorApplication {
 
+	public static String APP_ID = "org.eclipse.equinox.p2.director.extended";
+	
 	public void processArguments(String[] args) throws CoreException {
 		if (args == null) {
 			super.processArguments(args);
@@ -289,5 +302,5 @@ public class DirectorApplication extends ForkedDirectorApplication {
 			return value.substring(0, ind) + defaultValue + reminder;
 		}
 	}
-		
+	
 }

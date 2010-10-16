@@ -1,0 +1,9 @@
+Package: #{File.basename(file).chomp(".control")}
+Version: #{version}
+Section: Intalio-Cloud
+Priority: optional
+Architecture: all
+Depends: sun-java6-jdk
+Installed-Size: 5024
+Maintainer: Intalio <info@intalio.com>
+Description: #{label}

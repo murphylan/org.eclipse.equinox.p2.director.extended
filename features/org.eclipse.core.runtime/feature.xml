@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="org.eclipse.core.runtime"
+      label="%featureName"
+      version="3.6.0.qualifier"
+      provider-name="%providerName">
+
+   <description url="%descriptionURL">
+      %description
+   </description>
+
+   <copyright url="%copyrightURL">
+      %copyright
+   </copyright>
+
+   <license url="%licenseURL">
+      %license
+   </license>
+<!--   <requires id="org.eclipse.core.runtime" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+-->    <plugin id="org.eclipse.osgi" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+    <plugin id="org.eclipse.osgi.services" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+    <plugin id="org.eclipse.core.contenttype" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+    <plugin id="org.eclipse.core.jobs" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+    <plugin id="org.eclipse.core.runtime" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+    <plugin id="org.eclipse.equinox.app" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+    <plugin id="org.eclipse.equinox.common" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+    <plugin id="org.eclipse.equinox.preferences" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+    <plugin id="org.eclipse.equinox.registry" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+
+</feature>

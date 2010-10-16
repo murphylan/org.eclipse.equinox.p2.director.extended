@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="org.eclipse.equinox.p2.repository.tools"
+      label="%featureName"
+      version="3.6.0.qualifier"
+      provider-name="%providerName">
+
+   <description url="%descriptionURL">
+      %description
+   </description>
+
+   <copyright url="%copyrightURL">
+      %copyright
+   </copyright>
+
+   <license url="%licenseURL">
+      %license
+   </license>
+   
+   <plugin id="org.eclipse.equinox.p2.director.extended" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+   <plugin id="org.eclipse.equinox.p2.repository.tools" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+   <plugin id="org.eclipse.ant.core" download-size="0" install-size="0" version="0.0.0" unpack="false"/>
+   <plugin id="org.apache.ant" download-size="0" install-size="0" version="0.0.0" unpack="true"/>
+
+</feature>

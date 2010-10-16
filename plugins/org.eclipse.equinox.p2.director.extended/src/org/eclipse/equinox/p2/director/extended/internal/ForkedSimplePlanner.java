@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -369,21 +370,31 @@ public class ForkedSimplePlanner implements IPlanner {
 
 			IInstallableUnit[] availableIUs = gatherAvailableInstallableUnits(extraIUs.toArray(new IInstallableUnit[extraIUs.size()]), context, sub.newChild(ExpandWork / 4));
 
-			Set<IRequirement> sourceBundleRequirements = collectSourceBundleRequirements(availableIUs, profileChangeRequest, context);
+			
+			Slicer slicer = new Slicer(new QueryableArray(availableIUs), newSelectionContext, satisfyMetaRequirements(profileChangeRequest.getProfileProperties()));
+			IQueryable<IInstallableUnit> slice = slicer.slice(new IInstallableUnit[] {(IInstallableUnit) updatedPlan[0]}, sub.newChild(ExpandWork / 4));
+			if (slice == null) {				
+				IProvisioningPlan plan = engine.createPlan(profile, context);
+				plan.setStatus(slicer.getStatus());
+				return plan;
+			}
+			
+			//these units are the actually necessary units for runtime.
+			//let's add the sources
+			Set<IInstallableUnit> allIUsToInstallCollector = new HashSet<IInstallableUnit>();
+			Set<IRequirement> sourceBundleRequirements = collectSourceBundleRequirements(availableIUs, slice, profileChangeRequest, context, allIUsToInstallCollector);
 			if (sourceBundleRequirements != null && !sourceBundleRequirements.isEmpty()) {
 				//then we need to update the metaIU with the new gathered requirements:
 				Collection<IRequirement> alreadyRequired = ((IInstallableUnit) updatedPlan[0]).getRequirements();
 				sourceBundleRequirements.addAll(alreadyRequired);
 				updatedPlan[0] = createIURepresentingTheProfile(sourceBundleRequirements);
+				
+				//reslice ? no need because the source bundles have no extra requirements etc.
+				//slice = slicer.slice(new IInstallableUnit[] {(IInstallableUnit) updatedPlan[0]}, sub.newChild(ExpandWork / 4));
+				slice = new QueryableArray(allIUsToInstallCollector.toArray(
+						new IInstallableUnit[sourceBundleRequirements.size()]));
 			}
 			
-			Slicer slicer = new Slicer(new QueryableArray(availableIUs), newSelectionContext, satisfyMetaRequirements(profileChangeRequest.getProfileProperties()));
-			IQueryable<IInstallableUnit> slice = slicer.slice(new IInstallableUnit[] {(IInstallableUnit) updatedPlan[0]}, sub.newChild(ExpandWork / 4));
-			if (slice == null) {
-				IProvisioningPlan plan = engine.createPlan(profile, context);
-				plan.setStatus(slicer.getStatus());
-				return plan;
-			}
 			
 			@SuppressWarnings("unchecked")
 			final IQueryable<IInstallableUnit>[] queryables = new IQueryable[] {slice, new QueryableArray(profileChangeRequest.getAdditions().toArray(new IInstallableUnit[profileChangeRequest.getAdditions().size()]))};
@@ -926,12 +937,12 @@ public class ForkedSimplePlanner implements IPlanner {
 	}
 	
 	//actual useful things:
-	protected Set<IRequirement> collectSourceBundleRequirements(IInstallableUnit[] availableIUs, ProfileChangeRequest request,
-			ProvisioningContext context) {
+	protected Set<IRequirement> collectSourceBundleRequirements(IInstallableUnit[] availableIUs, IQueryable<IInstallableUnit> toInstallIUs, ProfileChangeRequest request,
+			ProvisioningContext context, Set<IInstallableUnit> allIUsToInstallCollector) {
 		String addSources = request.getProfileProperties().get(WITH_BUNDLE_SOURCES);
 		if (Boolean.TRUE.toString().equals(addSources) ||
 				Boolean.TRUE.toString().equals(context.getProperty(WITH_BUNDLE_SOURCES))) {
-			return AddSourcesRequirementsHelper.reviewAvailableIInstallableUnits(availableIUs);
+			return AddSourcesRequirementsHelper.reviewAvailableIInstallableUnits(availableIUs, toInstallIUs, allIUsToInstallCollector);
 		}
 		return Collections.EMPTY_SET;
 	}

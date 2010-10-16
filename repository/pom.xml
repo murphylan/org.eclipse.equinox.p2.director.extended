@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+// ========================================================================
+// Copyright (c) 2010 Intalio, Inc.
+// 
+// All rights reserved.
+// ========================================================================
+-->
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.eclipse.rt</groupId>
+    <artifactId>p2director</artifactId>
+    <version>3.6.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>org.eclipse.rt.p2director.repository</artifactId>
+  <packaging>eclipse-repository</packaging>
+  <description>Repository for the headless packaging multi-user install of p2.director</description>
+</project>

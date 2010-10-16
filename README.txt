@@ -11,6 +11,13 @@ Support for the flag -addSources
 It will install all the source bundles that can be found for the installed product.
 Reference thread: http://dev.eclipse.org/mhonarc/lists/p2-dev/msg03251.html
 
+Support for HTTP Authentication inside the url
+----------------------------------------------
+If a repository url uses the context path it will be used for authentication as an alternative to eclipse intenral keyring.
+For example
+http://joe:pass@example.com/eclipseprodcut/repository
+will use joe/pass for HTTP basic auth challenges.
+
 Examples:
 ---------
 From eclipse PDE, execute one of the 2 launch configurations.

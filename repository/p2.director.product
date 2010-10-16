@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?pde version="3.5"?>
+
+<product name="EclipseRT p2Director extended" uid="org.eclipse.p2.director"
+ version="3.6.0.qualifier" useFeatures="true" includeLaunchers="true">
+
+   <configIni use="default">
+   </configIni>
+
+   <launcherArgs>
+      <programArgs>-console</programArgs>
+   </launcherArgs>
+
+   <windowImages/>
+
+   <launcher name="eclipse">
+      <solaris/>
+      <win useIco="false">
+         <bmp/>
+      </win>
+   </launcher>
+
+   <vm>
+   </vm>
+
+   <plugins>
+   </plugins>
+
+   <features>
+      <feature id="org.eclipse.core.runtime" version="0.0.0"/>
+      <feature id="org.eclipse.equinox.server.core" version="0.0.0"/>
+      <feature id="org.eclipse.equinox.server.p2" version="0.0.0"/>
+      <feature id="org.eclipse.equinox.ecf.providers" version="0.0.0"/>
+      <feature id="org.eclipse.jetty.p2.extras" version="0.0.0"/>
+      <feature id="org.eclipse.equinox.p2.repository.tools" version="0.0.0"/>
+   </features>
+
+   <configurations>
+      <plugin id="org.eclipse.equinox.common" autoStart="true" startLevel="2" />
+      <plugin id="org.eclipse.equinox.ds" autoStart="true" startLevel="2" />
+      <plugin id="org.eclipse.equinox.p2.console" autoStart="true" startLevel="3" />
+      <plugin id="org.eclipse.equinox.simpleconfigurator" autoStart="true" startLevel="1" />
+      <plugin id="org.eclipse.equinox.simpleconfigurator.manipulator" autoStart="true" startLevel="3" />
+      <plugin id="org.eclipse.equinox.frameworkadmin.equinox" autoStart="true" startLevel="3" />
+      <plugin id="org.eclipse.equinox.p2.reconciler.dropins" autoStart="true" startLevel="4" />
+      <plugin id="org.eclipse.core.runtime" autoStart="true" startLevel="4" />
+
+      <!-- not sure whether this is necessary: in doubt start it. it does not work for us anyways.
+      <plugin id="org.eclipse.ecf.provider.filetransfer.scp" startLevel="4" /> -->
+
+      <property name="java.awt.headless" value="true" />   
+      <property name="osgi.requiredJavaVersion" value="1.5.0"/>
+   </configurations>
+
+</product>

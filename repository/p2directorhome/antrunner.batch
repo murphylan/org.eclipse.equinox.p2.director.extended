@@ -1,0 +1,37 @@
+@echo off
+
+if "%1" == "" ( 
+    rem - no arguments were specified. Print the usage information
+    echo Usage: %0 buildfilename
+    exit /b
+)
+
+rem Set JAVA_HOME in order to use different java than the default one on the system:
+rem set JAVA_HOME=
+if not defined JAVA_HOME goto :JAVA 
+set JAVA_COMMAND="%JAVA_HOME%\bin\java"
+goto :EXEC
+
+:JAVA
+cmd /Q /c java 2>1>nul
+if not errorlevel == 0 (
+@echo Java cannot be found on the system!!! 
+goto :END
+)
+set JAVA_COMMAND=java
+
+
+rem set path to eclipse folder. If local folder, use '.'; otherwise, use c:\path\to\eclipse
+set ECLIPSEHOME=.
+ 
+rem get path to equinox jar inside ECLIPSEHOME folder
+for /f "delims= tokens=1" %%c in ('dir /B /S /OD %ECLIPSEHOME%\plugins\org.eclipse.equinox.launcher_*.jar') do set EQUINOXJAR=%%c
+
+
+:EXEC
+SET TMP_WK=%temp%\TEMP_P2_WK
+MKDIR %TMP_WK%
+
+rem start Eclipse w/ java
+echo Using %EQUINOXJAR% to start up p2-director...
+java -jar %EQUINOXJAR% -data %TMP_WK% -application org.eclipse.ant.core.antRunner -buildfile %1
