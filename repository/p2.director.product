@@ -2,7 +2,7 @@
 <?pde version="3.5"?>
 
 <product name="EclipseRT p2Director extended" uid="org.eclipse.p2.director"
- version="3.6.0.qualifier" useFeatures="true" includeLaunchers="true">
+ version="3.7.0.qualifier" useFeatures="true" includeLaunchers="true">
 
    <configIni use="default">
    </configIni>
@@ -42,7 +42,6 @@
       <plugin id="org.eclipse.equinox.simpleconfigurator" autoStart="true" startLevel="1" />
       <plugin id="org.eclipse.equinox.simpleconfigurator.manipulator" autoStart="true" startLevel="3" />
       <plugin id="org.eclipse.equinox.frameworkadmin.equinox" autoStart="true" startLevel="3" />
-      <plugin id="org.eclipse.equinox.p2.reconciler.dropins" autoStart="true" startLevel="4" />
       <plugin id="org.eclipse.core.runtime" autoStart="true" startLevel="4" />
 
       <!-- not sure whether this is necessary: in doubt start it. it does not work for us anyways.

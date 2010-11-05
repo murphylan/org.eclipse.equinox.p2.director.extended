@@ -41,7 +41,6 @@ public class AddSourcesRequirementsHelper {
 //implements IProfileChangeRequestRequirementsReviewer {
 
     private static final String SOURCE_SUFFIX = ".source";
-    private static final String SOURCES_SUFFIX = ".sources";
 
     /**
      * Review the available IUs.
@@ -54,16 +53,20 @@ public class AddSourcesRequirementsHelper {
         Set<IRequirement> sourceRequirements = new HashSet<IRequirement>();
         
         List<IInstallableUnit> runtimeBundles = new LinkedList<IInstallableUnit>();
-        Map<String,IInstallableUnit> sourceBundles = new HashMap<String, IInstallableUnit>();
+        Map<String,Map<String,IInstallableUnit>> sourceBundles = new HashMap<String, Map<String,IInstallableUnit>>();
         for (IInstallableUnit iu : availableIUs) {
             IArtifactKey aKey = getBundleArtifactKey(iu);
             if (aKey == null) {
                 continue;
             }
             if (aKey.getId().endsWith(SOURCE_SUFFIX)) {
-                sourceBundles.put(aKey.getId().substring(0, aKey.getId().length() - SOURCE_SUFFIX.length()), iu);
-            } else if (aKey.getId().endsWith(SOURCES_SUFFIX)) {
-                sourceBundles.put(aKey.getId().substring(0, aKey.getId().length() - SOURCES_SUFFIX.length()), iu);
+            	String runtimeId = aKey.getId().substring(0, aKey.getId().length() - SOURCE_SUFFIX.length());
+            	Map<String,IInstallableUnit> ius = sourceBundles.get(runtimeId);
+            	if (ius == null) {
+            		ius = new HashMap<String, IInstallableUnit>();
+            	}
+            	ius.put(String.valueOf(iu.getVersion().getOriginal()), iu);
+            	sourceBundles.put(runtimeId, ius);
             } else {
                 runtimeBundles.add(iu);
             }
@@ -75,16 +78,21 @@ public class AddSourcesRequirementsHelper {
             runBundlesCounter++;
             IInstallableUnit runtimeBundleIU = toBeInstalledIt.next();
             allIUsToInstallCollector.add(runtimeBundleIU);
-            IInstallableUnit sourceBundle = sourceBundles.get(runtimeBundleIU.getId());
+            Map<String,IInstallableUnit> srcIUs = sourceBundles.get(runtimeBundleIU.getId());
+            if (srcIUs == null) {
+            	continue;
+            }
+            IInstallableUnit sourceBundle = srcIUs.get(String.valueOf(runtimeBundleIU.getVersion().getOriginal()));
+            if (sourceBundle == null) {
+            	continue;
+            }
             //create a new optional requirement for an osgi.bundle with the same version range, and the same
-            //same id suffixed by .source or .sources.
+            //same id suffixed by .source
             if (sourceBundle != null) {
                 srcBundlesCounter++;
                 allIUsToInstallCollector.add(sourceBundle);
                 IRequirement source = createOptionalSourceRequirement(runtimeBundleIU, sourceBundle);
                 sourceRequirements.add(source);
-            } else {
-      //          System.err.println(" - no source for " + runtimeBundleIU.getId());
             }
         }
         Activator.getFrameworkLog().log(new FrameworkLogEntry(DirectorApplication.APP_ID, 

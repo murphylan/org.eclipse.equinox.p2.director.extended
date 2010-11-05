@@ -8,85 +8,43 @@
  * 	IBM Corporation - initial API and implementation
  * 	Genuitec - bug fixes
  *  Sonatype, Inc. - ongoing development
- *  Intalio, Inc. - forked to support adding sources.
  ******************************************************************************/
-
 package org.eclipse.equinox.p2.director.extended.internal;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.StringTokenizer;
+import java.util.*;
 
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.MultiStatus;
-import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.core.runtime.OperationCanceledException;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.core.runtime.*;
 import org.eclipse.equinox.internal.p2.core.helpers.LogHelper;
 import org.eclipse.equinox.internal.p2.core.helpers.Tracing;
 import org.eclipse.equinox.internal.p2.director.AttachmentHelper;
-import org.eclipse.equinox.internal.p2.director.DirectorActivator;
 import org.eclipse.equinox.internal.p2.director.Explanation;
 import org.eclipse.equinox.internal.p2.director.Explanation.MissingIU;
 import org.eclipse.equinox.internal.p2.director.Messages;
+import org.eclipse.equinox.internal.p2.director.DirectorActivator;
 import org.eclipse.equinox.internal.p2.director.OperationGenerator;
 import org.eclipse.equinox.internal.p2.director.Projector;
-import org.eclipse.equinox.internal.p2.director.QueryableArray;
 import org.eclipse.equinox.internal.p2.director.Slicer;
+import org.eclipse.equinox.internal.p2.director.Explanation.MissingIU;
+import org.eclipse.equinox.internal.p2.director.ProfileChangeRequest;
+import org.eclipse.equinox.internal.p2.director.QueryableArray;
 import org.eclipse.equinox.internal.p2.metadata.IRequiredCapability;
 import org.eclipse.equinox.internal.p2.metadata.query.UpdateQuery;
 import org.eclipse.equinox.internal.p2.rollback.FormerState;
-import org.eclipse.equinox.internal.provisional.p2.director.PlannerStatus;
-import org.eclipse.equinox.internal.provisional.p2.director.ProfileChangeRequest;
-import org.eclipse.equinox.internal.provisional.p2.director.RequestStatus;
+import org.eclipse.equinox.internal.provisional.p2.director.*;
 import org.eclipse.equinox.p2.core.IAgentLocation;
 import org.eclipse.equinox.p2.core.IProvisioningAgent;
-import org.eclipse.equinox.p2.engine.IEngine;
-import org.eclipse.equinox.p2.engine.IProfile;
-import org.eclipse.equinox.p2.engine.IProfileRegistry;
-import org.eclipse.equinox.p2.engine.IProvisioningPlan;
-import org.eclipse.equinox.p2.engine.ProvisioningContext;
+import org.eclipse.equinox.p2.engine.*;
 import org.eclipse.equinox.p2.engine.query.IUProfilePropertyQuery;
-import org.eclipse.equinox.p2.metadata.IInstallableUnit;
-import org.eclipse.equinox.p2.metadata.IProvidedCapability;
-import org.eclipse.equinox.p2.metadata.IRequirement;
-import org.eclipse.equinox.p2.metadata.MetadataFactory;
+import org.eclipse.equinox.p2.metadata.*;
 import org.eclipse.equinox.p2.metadata.MetadataFactory.InstallableUnitDescription;
-import org.eclipse.equinox.p2.metadata.Version;
-import org.eclipse.equinox.p2.metadata.VersionRange;
-import org.eclipse.equinox.p2.planner.IPlanner;
-import org.eclipse.equinox.p2.planner.IProfileChangeRequest;
-import org.eclipse.equinox.p2.planner.ProfileInclusionRules;
-import org.eclipse.equinox.p2.query.CollectionResult;
-import org.eclipse.equinox.p2.query.CompoundQueryable;
-import org.eclipse.equinox.p2.query.IQuery;
-import org.eclipse.equinox.p2.query.IQueryResult;
-import org.eclipse.equinox.p2.query.IQueryable;
-import org.eclipse.equinox.p2.query.QueryUtil;
+import org.eclipse.equinox.p2.planner.*;
+import org.eclipse.equinox.p2.query.*;
 import org.eclipse.osgi.util.NLS;
-/**
- * [hugues]: copied and pasted from p2 driector helios 3.6.0 with minor modifications to support the -addSources arguments.
- */
+
 public class ForkedSimplePlanner implements IPlanner {
-	
-	//added here
-	public static final String WITH_BUNDLE_SOURCES = "org.eclipse.equinox.p2.director.extended.addSources"; //$NON-NLS-1$
-	
 	private static boolean DEBUG = Tracing.DEBUG_PLANNER_OPERANDS;
 
 	private static final int ExpandWork = 12;
@@ -363,39 +321,19 @@ public class ForkedSimplePlanner implements IPlanner {
 			extraIUs.addAll(profileChangeRequest.getRemovals());
 			if (context == null || context.getProperty(INCLUDE_PROFILE_IUS) == null || context.getProperty(INCLUDE_PROFILE_IUS).equalsIgnoreCase(Boolean.TRUE.toString())) {
 				Iterator<IInstallableUnit> itor = profile.available(QueryUtil.createIUAnyQuery(), null).iterator();
-				while (itor.hasNext()) {
+				while (itor.hasNext())
 					extraIUs.add(itor.next());
-				}
 			}
 
 			IInstallableUnit[] availableIUs = gatherAvailableInstallableUnits(extraIUs.toArray(new IInstallableUnit[extraIUs.size()]), context, sub.newChild(ExpandWork / 4));
 
-			
 			Slicer slicer = new Slicer(new QueryableArray(availableIUs), newSelectionContext, satisfyMetaRequirements(profileChangeRequest.getProfileProperties()));
 			IQueryable<IInstallableUnit> slice = slicer.slice(new IInstallableUnit[] {(IInstallableUnit) updatedPlan[0]}, sub.newChild(ExpandWork / 4));
-			if (slice == null) {				
+			if (slice == null) {
 				IProvisioningPlan plan = engine.createPlan(profile, context);
 				plan.setStatus(slicer.getStatus());
 				return plan;
 			}
-			
-			//these units are the actually necessary units for runtime.
-			//let's add the sources
-			Set<IInstallableUnit> allIUsToInstallCollector = new HashSet<IInstallableUnit>();
-			Set<IRequirement> sourceBundleRequirements = collectSourceBundleRequirements(availableIUs, slice, profileChangeRequest, context, allIUsToInstallCollector);
-			if (sourceBundleRequirements != null && !sourceBundleRequirements.isEmpty()) {
-				//then we need to update the metaIU with the new gathered requirements:
-				Collection<IRequirement> alreadyRequired = ((IInstallableUnit) updatedPlan[0]).getRequirements();
-				sourceBundleRequirements.addAll(alreadyRequired);
-				updatedPlan[0] = createIURepresentingTheProfile(sourceBundleRequirements);
-				
-				//reslice ? no need because the source bundles have no extra requirements etc.
-				//slice = slicer.slice(new IInstallableUnit[] {(IInstallableUnit) updatedPlan[0]}, sub.newChild(ExpandWork / 4));
-				slice = new QueryableArray(allIUsToInstallCollector.toArray(
-						new IInstallableUnit[sourceBundleRequirements.size()]));
-			}
-			
-			
 			@SuppressWarnings("unchecked")
 			final IQueryable<IInstallableUnit>[] queryables = new IQueryable[] {slice, new QueryableArray(profileChangeRequest.getAdditions().toArray(new IInstallableUnit[profileChangeRequest.getAdditions().size()]))};
 			slice = new CompoundQueryable<IInstallableUnit>(queryables);
@@ -904,7 +842,6 @@ public class ForkedSimplePlanner implements IPlanner {
 		return new ProfileChangeRequest(profileToChange);
 	}
 	
-		
 	//[hugues] introspection trick to workaround some visibility issues.
 	private static Field Slicer_nonGreedyIUs_Field;
 	private static Set<IInstallableUnit> getNonGreedyIUs(Slicer slicer) {
@@ -937,6 +874,8 @@ public class ForkedSimplePlanner implements IPlanner {
 	}
 	
 	//actual useful things:
+	//added here
+	public static final String WITH_BUNDLE_SOURCES = "org.eclipse.equinox.p2.director.extended.addSources"; //$NON-NLS-1$
 	protected Set<IRequirement> collectSourceBundleRequirements(IInstallableUnit[] availableIUs, IQueryable<IInstallableUnit> toInstallIUs, ProfileChangeRequest request,
 			ProvisioningContext context, Set<IInstallableUnit> allIUsToInstallCollector) {
 		String addSources = request.getProfileProperties().get(WITH_BUNDLE_SOURCES);
@@ -947,4 +886,5 @@ public class ForkedSimplePlanner implements IPlanner {
 		return Collections.EMPTY_SET;
 	}
 
+	
 }

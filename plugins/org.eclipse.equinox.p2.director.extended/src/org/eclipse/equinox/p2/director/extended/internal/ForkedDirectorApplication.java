@@ -11,7 +11,7 @@
  *     EclipseSource - ongoing development
  *     Sonatype, Inc. - ongoing development
  *     Intalio, Inc. - Forked version with less some methods promoted to 'protected'
- *                     instead of private so we can override the planner
+ *                     instead of private so we can override the planner and the -addSources 
  *******************************************************************************/
 package org.eclipse.equinox.p2.director.extended.internal;
 
@@ -20,6 +20,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.cert.Certificate;
 import java.util.*;
+
 import org.eclipse.core.runtime.*;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
@@ -27,6 +28,7 @@ import org.eclipse.equinox.internal.p2.core.helpers.*;
 import org.eclipse.equinox.internal.provisional.p2.director.*;
 import org.eclipse.equinox.p2.core.*;
 import org.eclipse.equinox.p2.engine.*;
+import org.eclipse.equinox.p2.engine.query.UserVisibleRootQuery;
 import org.eclipse.equinox.p2.metadata.*;
 import org.eclipse.equinox.p2.metadata.Version;
 import org.eclipse.equinox.p2.planner.IPlanner;
@@ -39,6 +41,7 @@ import org.eclipse.osgi.service.environment.EnvironmentInfo;
 import org.eclipse.osgi.util.NLS;
 import org.osgi.framework.*;
 import org.osgi.service.packageadmin.PackageAdmin;
+import org.eclipse.equinox.internal.p2.director.ProfileChangeRequest;
 import org.eclipse.equinox.internal.p2.director.app.Messages;
 import org.eclipse.equinox.internal.p2.director.app.Activator;
 import org.eclipse.equinox.internal.p2.director.app.ILog;
@@ -119,6 +122,7 @@ public class ForkedDirectorApplication implements IApplication {
 
 	private static final CommandLineOption OPTION_HELP = new CommandLineOption(new String[] {"-help", "-h", "-?"}, null, Messages.Help_Prints_this_command_line_help); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	private static final CommandLineOption OPTION_LIST = new CommandLineOption(new String[] {"-list", "-l"}, Messages.Help_lb_lt_comma_separated_list_gt_rb, Messages.Help_List_all_IUs_found_in_repos); //$NON-NLS-1$ //$NON-NLS-2$
+    private static final CommandLineOption OPTION_LIST_INSTALLED = new CommandLineOption(new String[] {"-listInstalledRoots", "-lir"}, null, /*Messages.Help_List_installed_roots*/"List Installed root IUs"); //$NON-NLS-1$ //$NON-NLS-2$	
 	private static final CommandLineOption OPTION_INSTALL_IU = new CommandLineOption(new String[] {"-installIU", "-installIUs", "-i"}, Messages.Help_lt_comma_separated_list_gt, Messages.Help_Installs_the_listed_IUs); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	private static final CommandLineOption OPTION_UNINSTALL_IU = new CommandLineOption(new String[] {"-uninstallIU", "-uninstallIUs", "-u"}, Messages.Help_lt_comma_separated_list_gt, Messages.Help_Uninstalls_the_listed_IUs); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	private static final CommandLineOption OPTION_REVERT = new CommandLineOption(new String[] {"-revert"}, Messages.Help_lt_comma_separated_list_gt, Messages.Help_Revert_to_previous_state); //$NON-NLS-1$
@@ -225,6 +229,7 @@ public class ForkedDirectorApplication implements IApplication {
 	private String flavor;
 	private boolean printHelpInfo = false;
 	private boolean printIUList = false;
+	private boolean printRootIUList = false;
 	private long revertToPreviousState = -1;
 	private boolean verifyOnly = false;
 	private boolean roamingProfile = false;
@@ -645,6 +650,13 @@ public class ForkedDirectorApplication implements IApplication {
 			return;
 		}
 
+		// Set platform environment defaults
+		EnvironmentInfo info = (EnvironmentInfo) ServiceHelper.getService(Activator.getContext(), EnvironmentInfo.class.getName());
+		os = info.getOS();
+		ws = info.getWS();
+		nl = info.getNL();
+		arch = info.getOSArch();
+
 		for (int i = 0; i < args.length; i++) {
 			// check for args without parameters (i.e., a flag arg)
 			String opt = args[i];
@@ -658,6 +670,11 @@ public class ForkedDirectorApplication implements IApplication {
 				continue;
 			}
 
+			if (OPTION_LIST_INSTALLED.isOption(opt)) {
+				printRootIUList = true;
+				continue;
+			}
+			
 			if (OPTION_HELP.isOption(opt)) {
 				printHelpInfo = true;
 				continue;
@@ -789,7 +806,7 @@ public class ForkedDirectorApplication implements IApplication {
 			throw new ProvisionException(NLS.bind(Messages.unknown_option_0, opt));
 		}
 
-		if (!printHelpInfo && !printIUList && !purgeRegistry && rootsToInstall.isEmpty() && rootsToUninstall.isEmpty() && revertToPreviousState == -1) {
+		if (!printHelpInfo && !printIUList && !printRootIUList && !purgeRegistry && rootsToInstall.isEmpty() && rootsToUninstall.isEmpty() && revertToPreviousState == -1) {
 			printMessage(Messages.Help_Missing_argument);
 			printHelpInfo = true;
 		}
@@ -842,6 +859,8 @@ public class ForkedDirectorApplication implements IApplication {
 					performProvisioningActions();
 				if (printIUList)
 					performList();
+				if (printRootIUList)
+					performListInstalledRoots();
 				if (purgeRegistry)
 					purgeRegistry();
 				printMessage(NLS.bind(Messages.Operation_complete, new Long(System.currentTimeMillis() - time)));
@@ -973,7 +992,7 @@ public class ForkedDirectorApplication implements IApplication {
 	}
 
 	private void performHelpInfo() {
-		CommandLineOption[] allOptions = new CommandLineOption[] {OPTION_HELP, OPTION_LIST, OPTION_INSTALL_IU, OPTION_UNINSTALL_IU, OPTION_REVERT, OPTION_DESTINATION, OPTION_METADATAREPOS, OPTION_ARTIFACTREPOS, OPTION_REPOSITORIES, OPTION_VERIFY_ONLY, OPTION_PROFILE, OPTION_FLAVOR, OPTION_SHARED, OPTION_BUNDLEPOOL, OPTION_PROFILE_PROPS, OPTION_ROAMING, OPTION_P2_OS, OPTION_P2_WS, OPTION_P2_ARCH, OPTION_P2_NL, OPTION_PURGEHISTORY, OPTION_FOLLOW_REFERENCES};
+		CommandLineOption[] allOptions = new CommandLineOption[] {OPTION_HELP, OPTION_LIST, OPTION_LIST_INSTALLED, OPTION_INSTALL_IU, OPTION_UNINSTALL_IU, OPTION_REVERT, OPTION_DESTINATION, OPTION_METADATAREPOS, OPTION_ARTIFACTREPOS, OPTION_REPOSITORIES, OPTION_VERIFY_ONLY, OPTION_PROFILE, OPTION_FLAVOR, OPTION_SHARED, OPTION_BUNDLEPOOL, OPTION_PROFILE_PROPS, OPTION_ROAMING, OPTION_P2_OS, OPTION_P2_WS, OPTION_P2_ARCH, OPTION_P2_NL, OPTION_PURGEHISTORY, OPTION_FOLLOW_REFERENCES};
 		for (int i = 0; i < allOptions.length; ++i) {
 			allOptions[i].appendHelp(System.out);
 		}
@@ -1054,4 +1073,13 @@ public class ForkedDirectorApplication implements IApplication {
 	public void setLog(ILog log) {
 		this.log = log;
 	}
+
+	private void performListInstalledRoots() throws CoreException {
+		IProfile profile = initializeProfile();
+		IQueryResult<IInstallableUnit> roots = profile.query(new UserVisibleRootQuery(), null);
+		Set<IInstallableUnit> sorted = new TreeSet<IInstallableUnit>(roots.toUnmodifiableSet());
+		for (IInstallableUnit iu : sorted)
+			System.out.println(iu.getId() + '/' + iu.getVersion());
+	}
+
 }

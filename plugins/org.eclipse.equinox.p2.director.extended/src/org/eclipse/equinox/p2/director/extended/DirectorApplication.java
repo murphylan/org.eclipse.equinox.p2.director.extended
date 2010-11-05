@@ -14,6 +14,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.Properties;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.ecf.core.util.Base64;
 import org.eclipse.equinox.p2.core.ProvisionException;
 import org.eclipse.equinox.p2.director.extended.internal.ForkedDirectorApplication;
 
@@ -70,6 +73,13 @@ import org.eclipse.equinox.p2.director.extended.internal.ForkedDirectorApplicati
 public class DirectorApplication extends ForkedDirectorApplication {
 
 	public static String APP_ID = "org.eclipse.equinox.p2.director.extended";
+	
+	/** when the key or the value of a system property is thispropertiesserver then we replace it by the 
+	 * server of the current properties file URL.
+	 * For example if -repository=${eclipse.mirror,this.properties.server}/eclipse/updates
+	 * and that properties file is located on http://download.eclipse.org/jetty/jetty-install.properties
+	 * then the resolved value is -repository=http://download.eclipse.org/eclipse/updates */
+	public static final String THIS_PROPERTIES_FILE_URL_SERVER = "this.properties.server";
 	
 	public void processArguments(String[] args) throws CoreException {
 		if (args == null) {
@@ -225,7 +235,7 @@ public class DirectorApplication extends ForkedDirectorApplication {
 		for (Entry<String,String> en : cmdArgs.entrySet()) {
 			args.add(en.getKey());
 			if (en.getValue().length() != 0) {
-				args.add(resolvePropertyValue(en.getValue()));
+				args.add(resolvePropertyValue(en.getValue(), null));
 			}
 		}
 		return args;
@@ -252,8 +262,18 @@ public class DirectorApplication extends ForkedDirectorApplication {
 			if (!ur.isAbsolute()) {
 				ur = new File(".").toURI().resolve(ur);
 			}
-			inStream = ur.toURL().openStream();
+			URL url = ur.toURL();
+			String auth = url.getUserInfo();
+			if (auth != null && url.getProtocol().equals("http")) {
+				String authEnc = Base64.encode(auth.getBytes());
+				URLConnection urlConnection = url.openConnection();
+				urlConnection.setRequestProperty("Authorization", "Basic " + authEnc);
+				inStream = urlConnection.getInputStream();
+			} else {
+				inStream = url.openStream();
+			}
 			p.load(inStream);
+			p = resolvePropertiesValues(p, url);
 //			System.err.println("Loading props " + ur.toString());
 		} catch (Throwable t) {
 			throw new ProvisionException("Invalid uri '" + uri + "'. " +
@@ -264,15 +284,27 @@ public class DirectorApplication extends ForkedDirectorApplication {
 		return p;
 	}
 	
+	private static Properties resolvePropertiesValues(Properties props, URL propFile) {
+		Properties n = new Properties();
+		for (Entry en : props.entrySet()) {
+			String key = (String)en.getKey();
+		    String value = (String)en.getValue();
+		    value = resolvePropertyValue(value, propFile);
+		    n.put(key, value);
+		}
+		return n;
+	}
+	
 	/**
 	 * Substitute the ${sysprop} by their actual system property.
 	 * ${sysprop,defaultvalue} will use 'defaultvalue' as the value if no sysprop is defined.
-	 * Not the most efficient code but we are shooting for simplicity and speed of devlopement here.
+	 * Not the most efficient code but we are shooting for simplicity and speed of development here.
+	 * Also do the very special this.properties.server and replace it by the server in the URL propFile
 	 * 
 	 * @param value
 	 * @return
 	 */
-	private static String resolvePropertyValue(String value) {
+	private static String resolvePropertyValue(String value, URL propFile) {
 		
 		int ind = value.indexOf("${");
 		if (ind == -1) {
@@ -287,15 +319,32 @@ public class DirectorApplication extends ForkedDirectorApplication {
 		int comma = sysprop.indexOf(',');
 		if (comma != -1 && comma+1 != sysprop.length()) {
 			defaultValue = sysprop.substring(comma+1);
-			defaultValue = resolvePropertyValue(defaultValue);
+			defaultValue = resolvePropertyValue(defaultValue, propFile);
 			sysprop = sysprop.substring(0,comma);
 		} else {
 			defaultValue = "${" + sysprop + "}";
 		}
 		
-		String v = System.getProperty(sysprop);
+		String v = null;
+		if (sysprop.equals(THIS_PROPERTIES_FILE_URL_SERVER)) {
+			v = THIS_PROPERTIES_FILE_URL_SERVER;
+		} else {
+			v = System.getProperty(sysprop);
+			if (v == null && THIS_PROPERTIES_FILE_URL_SERVER.equals(defaultValue)) {
+				v = THIS_PROPERTIES_FILE_URL_SERVER;
+			}
+		}
+		
+		if (propFile != null && v.equals(THIS_PROPERTIES_FILE_URL_SERVER)) {
+			v = propFile.toString();
+			int index = v.indexOf('/', propFile.getProtocol().length()+3);
+			if (index != -1) {
+				v = v.substring(0, index);
+			}
+		}
+		
 		String reminder = value.length() > ind2 + 1 ? value.substring(ind2+1) : "";
-		reminder = resolvePropertyValue(reminder);
+		reminder = resolvePropertyValue(reminder, propFile);
 		if (v != null) {
 			return value.substring(0, ind) + v + reminder;
 		} else {

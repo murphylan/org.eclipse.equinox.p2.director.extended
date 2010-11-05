@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: director-extended
 Bundle-SymbolicName: org.eclipse.equinox.p2.director.extended;singleton:=true
-Bundle-Version: 3.6.0.qualifier
+Bundle-Version: 3.7.0.qualifier
 Bundle-Vendor: Intalio
 Bundle-RequiredExecutionEnvironment: J2SE-1.5
 Import-Package: org.apache.commons.httpclient,
