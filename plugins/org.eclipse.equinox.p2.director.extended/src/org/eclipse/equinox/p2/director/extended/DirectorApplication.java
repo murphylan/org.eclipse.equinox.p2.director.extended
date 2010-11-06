@@ -264,7 +264,9 @@ public class DirectorApplication extends ForkedDirectorApplication {
 			}
 			URL url = ur.toURL();
 			String auth = url.getUserInfo();
-			if (auth != null && url.getProtocol().equals("http")) {
+			if (auth != null && 
+					(url.getProtocol().equals("http") ||
+							url.getProtocol().equals("https"))) {
 				String authEnc = Base64.encode(auth.getBytes());
 				URLConnection urlConnection = url.openConnection();
 				urlConnection.setRequestProperty("Authorization", "Basic " + authEnc);
@@ -326,7 +328,7 @@ public class DirectorApplication extends ForkedDirectorApplication {
 		}
 		
 		String v = null;
-		if (sysprop.equals(THIS_PROPERTIES_FILE_URL_SERVER)) {
+		if (THIS_PROPERTIES_FILE_URL_SERVER.equals(sysprop)) {
 			v = THIS_PROPERTIES_FILE_URL_SERVER;
 		} else {
 			v = System.getProperty(sysprop);
@@ -335,7 +337,7 @@ public class DirectorApplication extends ForkedDirectorApplication {
 			}
 		}
 		
-		if (propFile != null && v.equals(THIS_PROPERTIES_FILE_URL_SERVER)) {
+		if (propFile != null && THIS_PROPERTIES_FILE_URL_SERVER.equals(v)) {
 			v = propFile.toString();
 			int index = v.indexOf('/', propFile.getProtocol().length()+3);
 			if (index != -1) {

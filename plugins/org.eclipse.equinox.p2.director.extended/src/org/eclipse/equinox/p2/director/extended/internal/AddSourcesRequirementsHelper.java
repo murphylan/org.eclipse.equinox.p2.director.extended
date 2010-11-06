@@ -1,131 +1,172 @@
 /**
- * Copyright (c) 2010, Intalio Inc.
+ * Copyright (c) 2010, EclipseSource Inc.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  * 
  * Contributors:
- *     Intalio Inc. - initial API and implementation
+ *     EclipseSource - initial API and implementation
  */
 package org.eclipse.equinox.p2.director.extended.internal;
 
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.equinox.internal.p2.core.Activator;
-import org.eclipse.equinox.p2.director.extended.DirectorApplication;
-import org.eclipse.equinox.p2.metadata.IArtifactKey;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.equinox.p2.engine.IEngine;
+import org.eclipse.equinox.p2.engine.IPhaseSet;
+import org.eclipse.equinox.p2.engine.IProfile;
+import org.eclipse.equinox.p2.engine.IProfileRegistry;
+import org.eclipse.equinox.p2.engine.IProvisioningPlan;
+import org.eclipse.equinox.p2.engine.PhaseSetFactory;
+import org.eclipse.equinox.p2.engine.ProvisioningContext;
 import org.eclipse.equinox.p2.metadata.IInstallableUnit;
+import org.eclipse.equinox.p2.metadata.IProvidedCapability;
 import org.eclipse.equinox.p2.metadata.IRequirement;
 import org.eclipse.equinox.p2.metadata.MetadataFactory;
+import org.eclipse.equinox.p2.metadata.MetadataFactory.InstallableUnitDescription;
+import org.eclipse.equinox.p2.metadata.Version;
 import org.eclipse.equinox.p2.metadata.VersionRange;
+import org.eclipse.equinox.p2.planner.IPlanner;
+import org.eclipse.equinox.p2.planner.IProfileChangeRequest;
+import org.eclipse.equinox.p2.query.IQuery;
+import org.eclipse.equinox.p2.query.IQueryResult;
 import org.eclipse.equinox.p2.query.IQueryable;
 import org.eclipse.equinox.p2.query.QueryUtil;
-import org.eclipse.osgi.framework.log.FrameworkLogEntry;
 
 /**
  * Generate a set of optional requirement for the source bundles.
  * Use naming conventions of the symbolic name to point to the source bundle.
  * All source bundles are marked optional.
  * 
+ * @author Jeff McAfer
  * @author hmalphettes
  */
 public class AddSourcesRequirementsHelper {
 //implements IProfileChangeRequestRequirementsReviewer {
 
-    private static final String SOURCE_SUFFIX = ".source";
+    //copied from PDE contributed by EclipseSOurce https://bugs.eclipse.org/bugs/show_bug.cgi?id=328929
+	/**
+	 * Constant ID for a root installable unit that is installed into the profile if {@link #fIncludeSource} is set
+	 * to <code>true</code>.  The source units found in the repository will be set as required IUs on the root unit.
+	 */
+	private static final String SOURCE_IU_ID = "org.eclipse.pde.core.target.source.bundles"; //$NON-NLS-1$
 
-    /**
-     * Review the available IUs.
-     * Change the current IProfileChangeRequest.
-     * @param availableIUs
-     * @return true if something changed.
-     */
-    public static Set<IRequirement> reviewAvailableIInstallableUnits(IInstallableUnit[] availableIUs,
-            IQueryable<IInstallableUnit> toInstallIUs, Set<IInstallableUnit> allIUsToInstallCollector) {
-        Set<IRequirement> sourceRequirements = new HashSet<IRequirement>();
-        
-        List<IInstallableUnit> runtimeBundles = new LinkedList<IInstallableUnit>();
-        Map<String,Map<String,IInstallableUnit>> sourceBundles = new HashMap<String, Map<String,IInstallableUnit>>();
-        for (IInstallableUnit iu : availableIUs) {
-            IArtifactKey aKey = getBundleArtifactKey(iu);
-            if (aKey == null) {
-                continue;
-            }
-            if (aKey.getId().endsWith(SOURCE_SUFFIX)) {
-            	String runtimeId = aKey.getId().substring(0, aKey.getId().length() - SOURCE_SUFFIX.length());
-            	Map<String,IInstallableUnit> ius = sourceBundles.get(runtimeId);
-            	if (ius == null) {
-            		ius = new HashMap<String, IInstallableUnit>();
-            	}
-            	ius.put(String.valueOf(iu.getVersion().getOriginal()), iu);
-            	sourceBundles.put(runtimeId, ius);
-            } else {
-                runtimeBundles.add(iu);
-            }
-        }
-        Iterator<IInstallableUnit> toBeInstalledIt = toInstallIUs.query(QueryUtil.createIUAnyQuery(), new NullProgressMonitor()).iterator();
-        int runBundlesCounter = 0;
-        int srcBundlesCounter = 0;
-        while (toBeInstalledIt.hasNext()) {
-            runBundlesCounter++;
-            IInstallableUnit runtimeBundleIU = toBeInstalledIt.next();
-            allIUsToInstallCollector.add(runtimeBundleIU);
-            Map<String,IInstallableUnit> srcIUs = sourceBundles.get(runtimeBundleIU.getId());
-            if (srcIUs == null) {
-            	continue;
-            }
-            IInstallableUnit sourceBundle = srcIUs.get(String.valueOf(runtimeBundleIU.getVersion().getOriginal()));
-            if (sourceBundle == null) {
-            	continue;
-            }
-            //create a new optional requirement for an osgi.bundle with the same version range, and the same
-            //same id suffixed by .source
-            if (sourceBundle != null) {
-                srcBundlesCounter++;
-                allIUsToInstallCollector.add(sourceBundle);
-                IRequirement source = createOptionalSourceRequirement(runtimeBundleIU, sourceBundle);
-                sourceRequirements.add(source);
-            }
-        }
-        Activator.getFrameworkLog().log(new FrameworkLogEntry(DirectorApplication.APP_ID, 
-                FrameworkLogEntry.WARNING, 0,
-                ".. Installing " + runBundlesCounter + " runtime bundles and " + srcBundlesCounter + " source bundles.", 0, null, null));
-        System.err.println(".. Installing " + runBundlesCounter + " runtime bundles and " + srcBundlesCounter + " source bundles.");
-        return sourceRequirements;
-    }
     
-    /**
-     * @param iu
-     * @return null if this iu is not a bundle or the (first) artifact key that describes it as a bundle.
-     */
-    private static IArtifactKey getBundleArtifactKey(IInstallableUnit iu) {
-        Iterator<IArtifactKey> it = iu.getArtifacts().iterator();
-        while (it.hasNext()) {
-            IArtifactKey key = it.next();
-            if ("osgi.bundle".equals(key.getClassifier())) {
-                return key;
-            }
-        }
-        return null;
-    }
+	/** run a second pass of the planner to add in the source bundles for everything that's
+	 * in the current profile.
+	 */
+	public static IProvisioningPlan planInSourceBundles(IProfile profile, ProvisioningContext context, IProgressMonitor monitor,
+			IProfileRegistry profileRegistry, IEngine engine, IPlanner planner) throws CoreException {
+//		if (!fIncludeSource)
+//			return;
 
-    private static IRequirement createOptionalSourceRequirement(IInstallableUnit runtimeIU, IInstallableUnit sourceIU) {
-        //debug: make one of the source req mandatory.
-        boolean mandatory = false;//iu.getId().equals("org.eclipse.jetty.server") && iuIdSuffix.equals(SOURCE_SUFFIX);
-        
-        return MetadataFactory.createRequirement(IInstallableUnit.NAMESPACE_IU_ID, sourceIU.getId(),
-                new VersionRange(runtimeIU.getVersion(), true, runtimeIU.getVersion(), true), null,
-                !mandatory, //optional
-                false,
-                true);
-    }
+		SubProgressMonitor subMonitor = new SubProgressMonitor(monitor, 10);
+		subMonitor.beginTask(/*Messages.IUBundleContainer_ProvisioningSourceBundles*/"Provisioning source bundles", 200);
+
+		// create an IU that optionally and greedily requires the related source bundles.
+		// Completely replace any source IU that may already be in place
+		IInstallableUnit currentSourceIU = getCurrentSourceIU(profile);
+
+		// determine the new version number.  start at 1
+		Version sourceVersion = Version.createOSGi(1, 0, 0);
+		if (currentSourceIU != null) {
+			Integer major = (Integer) currentSourceIU.getVersion().getSegment(0);
+			sourceVersion = Version.createOSGi(major.intValue() + 1, 0, 0);
+		}
+		IInstallableUnit sourceIU = createSourceIU(profile, sourceVersion);
+
+		// call the planner again to add in the new source IU and all available source bundles
+//		IPlanner planner = P2TargetUtils.getPlanner();
+		IProfileChangeRequest request = planner.createChangeRequest(profile);
+		if (currentSourceIU != null)
+			request.remove(currentSourceIU);
+		request.add(sourceIU);
+		IProvisioningPlan plan = planner.getProvisioningPlan(request, context, new SubProgressMonitor(subMonitor, 20));
+		IStatus status = plan.getStatus();
+		if (!status.isOK()) {
+			throw new CoreException(status);
+		}
+		if (subMonitor.isCanceled()) {
+			return null;
+		}
+		return plan;
+		/*
+		long oldTimestamp = profile.getTimestamp();
+
+		// execute the provisioning plan
+		IPhaseSet phases = PhaseSetFactory.createDefaultPhaseSetExcluding(new String[] {PhaseSetFactory.PHASE_CHECK_TRUST, PhaseSetFactory.PHASE_CONFIGURE, PhaseSetFactory.PHASE_UNCONFIGURE, PhaseSetFactory.PHASE_UNINSTALL});
+//		IEngine engine = P2TargetUtils.getEngine();
+//		plan.setProfileProperty(P2TargetUtils.PROP_PROVISION_MODE, TargetDefinitionPersistenceHelper.MODE_PLANNER);
+//		plan.setProfileProperty(P2TargetUtils.PROP_ALL_ENVIRONMENTS, Boolean.toString(false));
+		IStatus result = engine.perform(plan, phases, new SubProgressMonitor(subMonitor, 140));
+
+		if (subMonitor.isCanceled()) {
+			return null;
+		}
+		if (!result.isOK()) {
+			throw new CoreException(result);
+		}
+
+		// remove the old (intermediate) profile version now we have a new one with source.
+		profileRegistry.removeProfile(profile.getProfileId(), oldTimestamp);
+		subMonitor.worked(10);
+		subMonitor.done();*/
+	}
+
+
+	// Create and return an IU that has optional and greedy requirements on all source bundles
+	// related to bundle IUs in the given queryable. 
+	/**
+	 * Creates and returns an IU that has optional and greedy requirements on all source bundles
+	 * related to bundle IUs in the given queryable.
+	 * @param queryable location to search for source bundle IUs
+	 * @param iuVersion version to set on the returned installable unit
+	 * @return a new installable unit with requirements on the available source IUs
+	 */
+	private static IInstallableUnit createSourceIU(IQueryable queryable, Version iuVersion) {
+		// compute the set of source bundles we could possibly need for the bundles in the profile
+		IRequirement bundleRequirement = MetadataFactory.createRequirement("org.eclipse.equinox.p2.eclipse.type", "bundle", null, null, false, false, false); //$NON-NLS-1$ //$NON-NLS-2$
+		IQueryResult profileIUs = queryable.query(QueryUtil.createIUAnyQuery(), null);
+		ArrayList requirements = new ArrayList();
+		for (Iterator i = profileIUs.iterator(); i.hasNext();) {
+			IInstallableUnit profileIU = (IInstallableUnit) i.next();
+			if (profileIU.satisfies(bundleRequirement)) {
+				String id = profileIU.getId() + ".source"; //$NON-NLS-1$
+				Version version = profileIU.getVersion();
+				VersionRange range = new VersionRange(version, true, version, true);
+				IRequirement sourceRequirement = MetadataFactory.createRequirement("osgi.bundle", id, range, null, true, false, true); //$NON-NLS-1$
+				requirements.add(sourceRequirement);
+			}
+		}
+
+		InstallableUnitDescription sourceDescription = new MetadataFactory.InstallableUnitDescription();
+		sourceDescription.setSingleton(true);
+		sourceDescription.setId(SOURCE_IU_ID);
+		sourceDescription.setVersion(iuVersion);
+		sourceDescription.addRequirements(requirements);
+		IProvidedCapability capability = MetadataFactory.createProvidedCapability(IInstallableUnit.NAMESPACE_IU_ID, SOURCE_IU_ID, iuVersion);
+		sourceDescription.setCapabilities(new IProvidedCapability[] {capability});
+		return MetadataFactory.createInstallableUnit(sourceDescription);
+	}
+
+	/**
+	 * Lookup and return the source IU in the given queryable or <code>null</code> if not found.
+	 * @param queryable location to look for source IUs
+	 * @return the source IU or <code>null</code>
+	 */
+	private static IInstallableUnit getCurrentSourceIU(IQueryable queryable) {
+		IQuery query = QueryUtil.createIUQuery(SOURCE_IU_ID);
+		IQueryResult list = queryable.query(query, null);
+		IInstallableUnit currentSourceIU = null;
+		if (!list.isEmpty())
+			currentSourceIU = (IInstallableUnit) list.iterator().next();
+		return currentSourceIU;
+	}
 
 }

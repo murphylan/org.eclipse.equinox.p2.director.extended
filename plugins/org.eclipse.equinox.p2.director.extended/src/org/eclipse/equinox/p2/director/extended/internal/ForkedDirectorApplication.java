@@ -15,36 +15,79 @@
  *******************************************************************************/
 package org.eclipse.equinox.p2.director.extended.internal;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.cert.Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
 
-import org.eclipse.core.runtime.*;
+import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.MultiStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.URIUtil;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
-import org.eclipse.equinox.internal.p2.core.helpers.*;
-import org.eclipse.equinox.internal.provisional.p2.director.*;
-import org.eclipse.equinox.p2.core.*;
-import org.eclipse.equinox.p2.engine.*;
+import org.eclipse.equinox.internal.p2.core.helpers.LogHelper;
+import org.eclipse.equinox.internal.p2.core.helpers.ServiceHelper;
+import org.eclipse.equinox.internal.p2.core.helpers.StringHelper;
+import org.eclipse.equinox.internal.p2.director.ProfileChangeRequest;
+import org.eclipse.equinox.internal.p2.director.app.Activator;
+import org.eclipse.equinox.internal.p2.director.app.ILog;
+import org.eclipse.equinox.internal.p2.director.app.Messages;
+import org.eclipse.equinox.internal.provisional.p2.director.IDirector;
+import org.eclipse.equinox.internal.provisional.p2.director.PlanExecutionHelper;
+import org.eclipse.equinox.p2.core.IProvisioningAgent;
+import org.eclipse.equinox.p2.core.IProvisioningAgentProvider;
+import org.eclipse.equinox.p2.core.ProvisionException;
+import org.eclipse.equinox.p2.core.UIServices;
+import org.eclipse.equinox.p2.engine.IEngine;
+import org.eclipse.equinox.p2.engine.IPhaseSet;
+import org.eclipse.equinox.p2.engine.IProfile;
+import org.eclipse.equinox.p2.engine.IProfileRegistry;
+import org.eclipse.equinox.p2.engine.IProvisioningPlan;
+import org.eclipse.equinox.p2.engine.PhaseSetFactory;
+import org.eclipse.equinox.p2.engine.ProvisioningContext;
 import org.eclipse.equinox.p2.engine.query.UserVisibleRootQuery;
-import org.eclipse.equinox.p2.metadata.*;
+import org.eclipse.equinox.p2.metadata.IInstallableUnit;
+import org.eclipse.equinox.p2.metadata.IVersionedId;
 import org.eclipse.equinox.p2.metadata.Version;
+import org.eclipse.equinox.p2.metadata.VersionRange;
+import org.eclipse.equinox.p2.metadata.VersionedId;
 import org.eclipse.equinox.p2.planner.IPlanner;
 import org.eclipse.equinox.p2.planner.IProfileChangeRequest;
-import org.eclipse.equinox.p2.query.*;
+import org.eclipse.equinox.p2.query.Collector;
+import org.eclipse.equinox.p2.query.IQuery;
+import org.eclipse.equinox.p2.query.IQueryResult;
+import org.eclipse.equinox.p2.query.IQueryable;
+import org.eclipse.equinox.p2.query.QueryUtil;
 import org.eclipse.equinox.p2.repository.artifact.IArtifactRepositoryManager;
 import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
 import org.eclipse.osgi.framework.log.FrameworkLog;
 import org.eclipse.osgi.service.environment.EnvironmentInfo;
 import org.eclipse.osgi.util.NLS;
-import org.osgi.framework.*;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 import org.osgi.service.packageadmin.PackageAdmin;
-import org.eclipse.equinox.internal.p2.director.ProfileChangeRequest;
-import org.eclipse.equinox.internal.p2.director.app.Messages;
-import org.eclipse.equinox.internal.p2.director.app.Activator;
-import org.eclipse.equinox.internal.p2.director.app.ILog;
 
 /**
  * [hugues]: copied and pasted from p2 driector helios 3.6.0 with minor modifications to support the -addSources arguments.
@@ -155,7 +198,8 @@ public class ForkedDirectorApplication implements IApplication {
 	private static final String FOLLOW_ARTIFACT_REPOSITORY_REFERENCES = "org.eclipse.equinox.p2.director.followArtifactRepositoryReferences"; //$NON-NLS-1$
 
 	//added here
-	private static final String WITH_BUNDLE_SOURCES = ForkedSimplePlanner.WITH_BUNDLE_SOURCES;
+	public static final String WITH_BUNDLE_SOURCES = "org.eclipse.equinox.p2.director.extended.addSources"; //$NON-NLS-1$
+
 	
 	public static final String LINE_SEPARATOR = System.getProperty("line.separator"); //$NON-NLS-1$
 
@@ -504,8 +548,8 @@ public class ForkedDirectorApplication implements IApplication {
 	 * @return
 	 */
 	protected IPlanner lookupPlanner() {
-		//return (IPlanner) targetAgent.getService(IPlanner.SERVICE_NAME);
-		return new ForkedSimplePlanner(targetAgent);
+		return (IPlanner) targetAgent.getService(IPlanner.SERVICE_NAME);
+		//return new ForkedSimplePlanner(targetAgent);
 	}
 
 	private void logStatus(IStatus status) {
@@ -598,17 +642,51 @@ public class ForkedDirectorApplication implements IApplication {
 	}
 
 	private void planAndExecute(IProfile profile, ProvisioningContext context, ProfileChangeRequest request) throws CoreException {
+		System.out.println("Retrieving the runtime bundles...");
 		IProvisioningPlan result = planner.getProvisioningPlan(request, context, new NullProgressMonitor());
+
 		IStatus operationStatus = result.getStatus();
 		if (!operationStatus.isOK())
 			throw new CoreException(operationStatus);
+		System.out.println("Installing...");
 		executePlan(context, result);
+		
+		if (addSourcesBundles) {
+			System.out.println("Retrieving the source bundles...");
+			try {
+				IProfileRegistry profileRegistry = (IProfileRegistry) targetAgent.getService(IProfileRegistry.SERVICE_NAME);
+			 	IProvisioningPlan sourcesPlan =
+			 			AddSourcesRequirementsHelper.planInSourceBundles(profile,
+						context, new NullProgressMonitor(), profileRegistry, engine, planner);
+			 	long oldTimestamp = profile.getTimestamp();
+				IPhaseSet phases = PhaseSetFactory.createDefaultPhaseSetExcluding(
+						new String[] {PhaseSetFactory.PHASE_CHECK_TRUST, PhaseSetFactory.PHASE_CONFIGURE,
+								PhaseSetFactory.PHASE_UNCONFIGURE, PhaseSetFactory.PHASE_UNINSTALL});
+			 	executePlan(context, sourcesPlan, phases);
+				// remove the old (intermediate) profile version now we have a new one with source.
+				profileRegistry.removeProfile(profile.getProfileId(), oldTimestamp);			 	
+			} catch (CoreException e) {
+				//nevermind
+				e.printStackTrace();
+			}
+		}
+		
+	}
+	private void executePlan(ProvisioningContext context, IProvisioningPlan result) throws CoreException {
+		executePlan(context, result, null);
 	}
 
-	private void executePlan(ProvisioningContext context, IProvisioningPlan result) throws CoreException {
+	private void executePlan(ProvisioningContext context, IProvisioningPlan result,
+			IPhaseSet phaseSet) throws CoreException {
 		IStatus operationStatus;
 		if (!verifyOnly) {
-			operationStatus = PlanExecutionHelper.executePlan(result, engine, context, new NullProgressMonitor());
+			if (phaseSet != null) {
+				operationStatus = PlanExecutionHelper.executePlan(result, engine, 
+					phaseSet, context, new NullProgressMonitor());
+			} else {
+				operationStatus = PlanExecutionHelper.executePlan(result, engine, 
+						context, new NullProgressMonitor());
+			}
 			if (!operationStatus.isOK()) {
 				if (noArtifactRepositorySpecified && hasNoRepositoryFound(operationStatus))
 					throw new ProvisionException(Messages.Application_NoRepositories);
@@ -727,6 +805,7 @@ public class ForkedDirectorApplication implements IApplication {
 
 			if (OPTION_DESTINATION.isOption(opt)) {
 				destination = processFileArgument(getRequiredArgument(args, ++i));
+				destination = destination.getAbsoluteFile();//workaround bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=329619
 				continue;
 			}
 
