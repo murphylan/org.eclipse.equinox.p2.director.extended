@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <launchConfiguration type="org.eclipse.pde.ui.RuntimeWorkbench">
 <booleanAttribute key="append.args" value="true"/>
-<stringAttribute key="application" value="org.eclipse.equinox.p2.director.extended"/>
+<stringAttribute key="application" value="org.eclipse.equinox.p2.artifact.repository.extended.mirrorApplication"/>
 <booleanAttribute key="askclear" value="true"/>
 <booleanAttribute key="automaticAdd" value="true"/>
 <booleanAttribute key="automaticValidate" value="false"/>
@@ -10,15 +10,15 @@
 <booleanAttribute key="clearConfig" value="false"/>
 <booleanAttribute key="clearws" value="false"/>
 <booleanAttribute key="clearwslog" value="false"/>
-<stringAttribute key="configLocation" value="${workspace_loc}/.metadata/.plugins/org.eclipse.pde.core/Test-Extended-Director-rt-starterkit-online-properties"/>
+<stringAttribute key="configLocation" value="${workspace_loc}/.metadata/.plugins/org.eclipse.pde.core/Test-Extended-Mirror-jetty"/>
 <booleanAttribute key="default" value="false"/>
 <booleanAttribute key="includeOptional" value="true"/>
-<stringAttribute key="location" value="${workspace_loc}/../runtime-Test-Extended-Director"/>
+<stringAttribute key="location" value="${workspace_loc}/../runtime-Test-Extended-Mirror"/>
 <listAttribute key="org.eclipse.debug.ui.favoriteGroups">
 <listEntry value="org.eclipse.debug.ui.launchGroup.debug"/>
 <listEntry value="org.eclipse.debug.ui.launchGroup.run"/>
 </listAttribute>
-<stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="-os ${target.os} -ws ${target.ws} -arch ${target.arch} -nl ${target.nl} -consoleLog -clean -addSources -props http://download.eclipse.org/jetty/7.1.4.v20100610/repository/install-rtosgistarterkit.properties"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="-os ${target.os} -ws ${target.ws} -arch ${target.arch} -nl ${target.nl} -consoleLog -clean -destination ${user.home}/.p2/tmp/testfilteredmirror -source file:///home/hmalphettes/proj/osgi-exp/jetty-svn/built-signed/helios-sr2 -exclude *.source"/>
 <stringAttribute key="org.eclipse.jdt.launching.SOURCE_PATH_PROVIDER" value="org.eclipse.pde.ui.workbenchClasspathProvider"/>
 <stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-Xms64m -Xmx1024m"/>
 <stringAttribute key="pde.version" value="3.3"/>

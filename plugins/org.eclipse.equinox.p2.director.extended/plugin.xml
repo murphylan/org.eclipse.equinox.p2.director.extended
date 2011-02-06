@@ -14,7 +14,24 @@
 	</extension> 
 	<!--extension id="org.eclipse.equinox.p2.director.extended.product" point="org.eclipse.core.runtime.products">
 		<product application="org.eclipse.equinox.p2.director.extended" name="Extended Equinox P2 Director" />
-	</extension--> 
+	</extension-->
+	
+	<extension id="org.eclipse.equinox.p2.artifact.repository.extended.mirrorApplication"  point="org.eclipse.core.runtime.applications">
+        <application cardinality="1" thread="main" visible="true">
+            <run class="org.eclipse.equinox.p2.internal.repository.tools.extended.MirrorApplicationWithFilters" >
+                <parameter name="metadataOrArtifacts" value="artifacts" />
+            </run>
+        </application>
+    </extension>
+    
+    <extension id="org.eclipse.equinox.p2.metadata.repository.extended.mirrorApplication" point="org.eclipse.core.runtime.applications">
+        <application cardinality="1" thread="main" visible="true">
+            <run class="org.eclipse.equinox.p2.internal.repository.tools.MirrorApplicationWithFilters">
+                <parameter name="metadataOrArtifacts" value="metadata" />
+            </run>
+      </application>
+   </extension>
+	
 	
 	<!-- Support for http basic authentication with credentials written
 	inside the url, debian style: http://USERNAME:PASSWORD@HOST:PORT/... -->

@@ -8,6 +8,8 @@ Bundle-RequiredExecutionEnvironment: J2SE-1.5
 Import-Package: org.apache.commons.httpclient,
  org.eclipse.equinox.p2.core,
  org.eclipse.equinox.p2.core.spi,
+ org.eclipse.equinox.p2.internal.repository.mirroring,
+ org.eclipse.equinox.p2.internal.repository.tools,
  org.eclipse.equinox.p2.repository.artifact,
  org.eclipse.equinox.p2.repository.metadata,
  org.eclipse.osgi.framework.log,
