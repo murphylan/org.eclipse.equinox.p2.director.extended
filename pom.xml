@@ -26,7 +26,8 @@
     <!-- http://download.eclipse.org/eclipse/updates/3.6milestones -->
     <i-orbit-site>http://release.intalio.com/m2repo/com/intalio/helium/orbit-p2/repository/1.0.0.018</i-orbit-site>
     <i-orbit-binaries>http://release.intalio.com/m2repo/com/intalio/helium/orbit-p2/repository-binaries/1.0.0.017</i-orbit-binaries>
-    <equinox-site>${main-eclipse-url}/eclipse/updates/3.7milestones/S-3.7M3-201010281441</equinox-site>
+    <!--equinox-site>${main-eclipse-url}/eclipse/updates/3.7milestones/S-3.7M3-201010281441</equinox-site-->
+    <equinox-site>${main-eclipse-url}/eclipse/updates/3.7milestones</equinox-site>
     <!--equinox-site>${eclipse-mirror-url}/eclipse/updates/3.6</equinox-site-->
     <ecf-site>${main-eclipse-url}/rt/ecf/3.3/helios/site.p2</ecf-site>
   </properties>
