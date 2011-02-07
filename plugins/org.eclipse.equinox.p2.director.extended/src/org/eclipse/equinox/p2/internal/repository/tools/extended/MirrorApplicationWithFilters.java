@@ -83,8 +83,8 @@ public class MirrorApplicationWithFilters extends MirrorApplicationForked {
 		ListIterator<String> it = newArgs.listIterator();
 		while (it.hasNext()) {
 			String arg = it.next();
-			if ((arg.equals("-exclude") || arg.equals("-include")) && it.hasNext()) {
-				boolean isExclude = arg.equals("-exclude");
+			if ((arg.startsWith("-exclude") || arg.startsWith("-include")) && it.hasNext()) {
+				boolean isExclude = arg.startsWith("-exclude");
 				it.remove();
 				String filter = it.next();
 				it.remove();
@@ -192,19 +192,21 @@ public class MirrorApplicationWithFilters extends MirrorApplicationForked {
 			keys = new ArrayList<IArtifactKey>(result.toSet());
 		}
 		
-		//descriptor queryable must be called after the artifact keys have been queried
-		//otherwise nothing will be there.
-		IQueryResult<IArtifactDescriptor> exclusions = getCompositeArtifactRepository()
-			.descriptorQueryable().query(excludingQuery, null);
-
-		for (IArtifactDescriptor d : exclusions.toSet()) {
-			//this could be optimized although it probably won't make a big difference.
-			ListIterator<IArtifactKey> kIt = keys.listIterator();
-			while (kIt.hasNext()) {
-				IArtifactKey kI = kIt.next();
-				if (kI.getId().equals(d.getArtifactKey().getId())) {
-					kIt.remove();
-					break;
+		if (excludingQuery != null) {
+			//descriptor queryable must be called after the artifact keys have been queried
+			//otherwise nothing will be there.
+			IQueryResult<IArtifactDescriptor> exclusions = getCompositeArtifactRepository()
+				.descriptorQueryable().query(excludingQuery, null);
+	
+			for (IArtifactDescriptor d : exclusions.toSet()) {
+				//this could be optimized although it probably won't make a big difference.
+				ListIterator<IArtifactKey> kIt = keys.listIterator();
+				while (kIt.hasNext()) {
+					IArtifactKey kI = kIt.next();
+					if (kI.getId().equals(d.getArtifactKey().getId())) {
+						kIt.remove();
+						break;
+					}
 				}
 			}
 		}
