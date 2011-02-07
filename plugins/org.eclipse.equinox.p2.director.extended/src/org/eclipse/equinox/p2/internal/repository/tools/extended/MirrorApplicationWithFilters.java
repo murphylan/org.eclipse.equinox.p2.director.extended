@@ -12,7 +12,9 @@ package org.eclipse.equinox.p2.internal.repository.tools.extended;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
+import java.util.StringTokenizer;
 
 import org.eclipse.equinox.p2.director.extended.ArgumentsLoader;
 import org.eclipse.equinox.p2.internal.repository.mirroring.Mirroring;
@@ -86,12 +88,12 @@ public class MirrorApplicationWithFilters extends MirrorApplicationForked {
 				it.remove();
 				String filter = it.next();
 				it.remove();
-				filter = processIncludeExclude(filter);
-				if (filter != null) {
+				List<String> filters = processIncludeExclude(filter);
+				if (filters != null) {
 					if (isExclude) {
-						excludes.add(filter);
+						excludes.addAll(filters);
 					} else {
-						includes.add(filter);
+						includes.addAll(filters);
 					}
 				}
 			}
@@ -107,22 +109,40 @@ public class MirrorApplicationWithFilters extends MirrorApplicationForked {
 			includingQuery = createIncludingQuery(
 				includes.toArray(new String[includes.size()]));
 		}
+		StringBuilder sb = new StringBuilder("Executing mirror with");
+		for (String a : args) {
+			sb.append(" ");
+			sb.append(a);
+		}
+		for (String excl : excludes) {
+			sb.append(" -exclude " + excl);
+		}
+		for (String incl : includes) {
+			sb.append(" -include " + incl);
+		}
+		System.err.println(sb);
+
 	}
 	
 	/**
 	 * @param value
 	 * @return The same value stripped of the enclosing quotes if there were such thing.
 	 */
-	private static String processIncludeExclude(String value) {
+	private static List<String> processIncludeExclude(String value) {
 		value = value.trim();
 		if ((value.startsWith("\"") || value.startsWith("'"))
 				&& (value.endsWith("\"") || value.endsWith("'"))) {
 			value = value.substring(1,value.length()-2);
 		}
-		if (value.length() != 0) {
-			return value;
+		if (value.length() == 0) {
+			return null;
 		}
-		return null;
+		List<String> res = new ArrayList<String>();
+		StringTokenizer tokenizer = new StringTokenizer(value, "\n\t\r \"'", false);
+		while (tokenizer.hasMoreElements()) {
+			res.add(tokenizer.nextToken());
+		}
+		return res;
 	}
 	
 	/**
