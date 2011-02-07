@@ -120,7 +120,7 @@ public class MirrorApplicationWithFilters extends MirrorApplicationForked {
 		for (String incl : includes) {
 			sb.append(" -include " + incl);
 		}
-		System.err.println(sb);
+		System.out.println(sb);
 
 	}
 	
