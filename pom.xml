@@ -19,7 +19,7 @@
     <main-eclipse-url>http://download.eclipse.org</main-eclipse-url>
   
     <!--pathToPack200ParentFolder>/usr/lib/jvm/java-5-sun/bin</pathToPack200ParentFolder-->
-    <forceContextQualifier>v20101106</forceContextQualifier>
+    <forceContextQualifier>v20110221</forceContextQualifier>
     <tycho-version>0.9.1</tycho-version>
     
     <jetty-site>${eclipse-mirror-url}/jetty/7.1.4.v20100610/repository/</jetty-site>

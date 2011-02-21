@@ -6,6 +6,7 @@ Bundle-Version: 3.7.0.qualifier
 Bundle-Vendor: Intalio
 Bundle-RequiredExecutionEnvironment: J2SE-1.5
 Import-Package: org.apache.commons.httpclient,
+ org.eclipse.equinox.internal.p2.artifact.repository,
  org.eclipse.equinox.p2.core,
  org.eclipse.equinox.p2.core.spi,
  org.eclipse.equinox.p2.internal.repository.mirroring,

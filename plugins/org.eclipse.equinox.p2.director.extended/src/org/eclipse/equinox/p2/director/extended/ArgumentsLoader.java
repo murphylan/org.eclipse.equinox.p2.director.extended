@@ -219,6 +219,9 @@ public class ArgumentsLoader {
 						cmdArgs.put(opt, v);
 						i++;
 					}
+				} else {
+					//a flag
+					cmdArgs.put(opt, "");
 				}
 			}
 		}
