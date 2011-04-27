@@ -185,6 +185,15 @@ public class ArgumentsLoader {
 				}
 				props.put(opt, args[i+1]);
 				i++;
+			} else if (opt.startsWith("-D") && opt.indexOf('=') != -1) {
+				int eqIndex = opt.indexOf('=');
+				String sysKey = opt.substring(2, eqIndex);
+				String sysValue = opt.substring(eqIndex+1);
+				if (sysValue.startsWith("\"") && sysValue.endsWith("\"")
+						|| (sysValue.startsWith("'") && sysValue.endsWith("'"))) {
+					sysValue = sysValue.substring(1, sysValue.length()-1);
+				}
+				System.setProperty(sysKey, sysValue);
 			} else {
 				newArgs.add(opt);
 			}
